@@ -9,7 +9,7 @@
 ```bash
 wsl --install -d Ubuntu
 ```
-## Install other requirements:
+## Install other requirements (With Ubuntu terminal)
 ```bash
 sudo apt update
 sudo apt install gcc-arm-none-eabi binutils-arm-none-eabi make qemu-system-arm
