@@ -9,12 +9,12 @@
 ```bash
 wsl --install -d Ubuntu
 ```
-## Install other requirements (With Ubuntu terminal)
+## Install other requirements (With Ubuntu terminal):
 ```bash
 sudo apt update
 sudo apt install gcc-arm-none-eabi binutils-arm-none-eabi make qemu-system-arm
 ```
-# Make file and run OS:
+# Make file and run OS (With Ubuntu terminal):
 ```bash
 make run
 ```
