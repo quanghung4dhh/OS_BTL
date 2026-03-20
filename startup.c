@@ -2,6 +2,7 @@
 
 extern uint32_t _estack, _sidata, _sdata, _edata, _sbss, _ebss;
 extern int main(void);
+extern void SysTick_Handler(void);
 
 void Reset_Handler(void) {
     /* Copy dữ liệu từ Flash sang RAM */
@@ -29,4 +30,7 @@ __attribute__((section(".isr_vector")))
 uint32_t *vector_table[] = {
     (uint32_t *)&_estack,
     (uint32_t *)Reset_Handler,
+    0, 0, 0, 0, 0, 0, 0, 0,     /* Vị trí 2-9: Dự trữ */
+    0, 0, 0, 0, 0,              /* Vị trí 10-14: Các lỗi hệ thống khác */
+    (uint32_t *)SysTick_Handler /* Vị trí 15: SysTick Timer! */
 };
