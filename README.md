@@ -9,6 +9,7 @@
 ```bash
 wsl --install -d Ubuntu
 ```
+## Then restart your computer
 ## Install other requirements (With Ubuntu terminal):
 ```bash
 sudo apt update
