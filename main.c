@@ -14,6 +14,23 @@ void print_uart(const char *str) {
     }
 }
 
+/* Hàm in một số nguyên ra UART */
+void print_int(uint32_t num) {
+    if (num == 0) {
+        print_uart("0");
+        return;
+    }
+    char buf[10];
+    int i = 0;
+    while (num > 0) {
+        buf[i++] = '0' + (num % 10);
+        num /= 10;
+    }
+    while (i > 0) {
+        *UART0_DR = (uint32_t)buf[--i];
+    }
+}
+
 /* --- 3. CẤU HÌNH NHỊP TIM SYSTICK --- */
 void SysTick_Init(uint32_t ticks) {
     SYSTICK_CTRL = 0;           /* Tắt SysTick để cài đặt an toàn */
@@ -31,9 +48,14 @@ volatile uint32_t system_ticks = 0;
 void SysTick_Handler(void) {
     system_ticks++; /* Tăng biến đếm tổng của OS */
     
-    /* Cứ mỗi 1000 lần ngắt (1 giây), in ra màn hình 1 dòng */
+    /* Cứ mỗi 1000 lần ngắt (1 giây), in ra màn hình số giây đã trôi qua */
     if (system_ticks % 1000 == 0) {
-        print_uart("[SysTick] 1 Second passed! Thump... Thump...\n");
+        print_uart("Tick: ");
+        print_int(system_ticks / 1000);
+        print_uart(" seconds passed \n");
+        if (system_ticks % 10000 == 0) {
+          print_uart("Horray!!! \n");
+        }
     }
 }
 
@@ -45,7 +67,7 @@ int main(void) {
 
     volatile int os_tick = 0; 
     SysTick_Init(12000);
-    print_uart("Heartbeat started! CPU entering Idle Mode...\n\n");
+    print_uart("Tick started! CPU entering Idle Mode...\n\n");
     
     while (1) {
         os_tick++;
