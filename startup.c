@@ -2,7 +2,7 @@
 
 extern uint32_t _estack, _sidata, _sdata, _edata, _sbss, _ebss;
 extern int main(void);
-extern void SysTick_Handler(void);
+extern void SysTick_Handler(void); //Khai báo hàm SysTick
 
 void Reset_Handler(void) {
     /* Copy dữ liệu từ Flash sang RAM */
@@ -32,5 +32,6 @@ uint32_t *vector_table[] = {
     (uint32_t *)Reset_Handler,
     0, 0, 0, 0, 0, 0, 0, 0,     /* Vị trí 2-9: Dự trữ */
     0, 0, 0, 0, 0,              /* Vị trí 10-14: Các lỗi hệ thống khác */
-    (uint32_t *)SysTick_Handler /* Vị trí 15: SysTick Timer! */
+    (uint32_t *)SysTick_Handler /* Vị trí 15: SysTick Timer! Đây là vị trí
+                                  ngắt đồng hồ theo tài liệu lõi kiến trúc của ARM Cotex-M3 */
 };
