@@ -49,19 +49,40 @@ void SysTick_Init(uint32_t ticks) {
 /* --- 4. HÀM PHỤC VỤ NGẮT (INTERRUPT HANDLER) --- */
 /* Cứ mỗi khi SysTick đếm về 0, CPU sẽ VỨT BỎ MỌI VIỆC ĐANG LÀM để nhảy thẳng vào đây */
 volatile uint32_t system_ticks = 0;
+volatile uint8_t flag_10000 = 0;
+volatile uint8_t flag_1000 = 0;
 
 void SysTick_Handler(void) {
     system_ticks++; /* Tăng biến đếm tổng của OS */
     
     /* Cứ mỗi 1000 lần ngắt (1 giây), in ra màn hình số giây đã trôi qua */
-    if (system_ticks % 1000 == 0) {
-        print_uart("Tick: ");
-        print_int(system_ticks / 1000);
-        print_uart(" seconds passed \n");
-        if (system_ticks % 10000 == 0) {
-          print_uart("Horray!!! \n");
-        }
+    if (system_ticks % 1000 == 0) flag_1000 = 1;
+    if (system_ticks % 10000 == 0) flag_10000 = 1;
+}
+struct TCB{
+    uint32_t *sp;  // stack pointer
+};
+TCB tasks[3];
+// Khởi tạo stack cho mỗi task (i: nhiệm vụ, task_func:con trỏ lệnh, stack: con trỏ chứa stack)
+void init_task_stack(int i, void (*task_func)(), uint32_t *stack) {
+    uint32_t *sp = &stack[Stack_size];
+
+    *(--sp) = 0x01000000;
+    *(--sp) = (uint32_t)task_func;
+    *(--sp) = 0xFFFFFFFD;
+
+    *(--sp) = 0; //R12
+    *(--sp) = 0; //R3
+    *(--sp) = 0; //R2
+    *(--sp) = 0; //R1
+    *(--sp) = 0; //R0
+   
+    //push vào thanh ghi R11-R4
+    for (int j = 0; j < 8; j++) {
+        *(--sp) = 0;
     }
+    // Mỗi task phải có stack riêng để lưu tiến trình khi cần context switch
+     tasks[i].sp = sp;
 }
 
 
@@ -74,10 +95,17 @@ int main(void) {
     SysTick_Init(12000);  //CPU ảo của QEMU chạy ở tần số 12MHz, 12000 tương ứng đúng với 1ms
     print_uart("Tick started! CPU entering Idle Mode...\n\n");
     
-    while (1) {
-        os_tick++;
-        /* OS đang chạy ổn định trong vòng lặp vô hạn */
+    while(1){
+        if (flag_1000) {
+            printnumber(count++);
+            flag_1000 = 0;
+        }
+        if (flag_10000){
+            print_uart("oke");
+            flag_10000 = 0;
+        } 
     }
+    
     
     return 0;
 }
