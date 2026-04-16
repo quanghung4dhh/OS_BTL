@@ -43,6 +43,7 @@ void SysTick_Init(uint32_t ticks) {
     // 1 << 0 : Bật nguồn cho Systick
     // 1 << 1 : Tạo ngắt khi đếm đến 0
     // 1 << 2 : Dùng xung clock với tần số của CPU là 12MHz
+    SYSTICK_CTRL = 0x07;
 
 }
 
