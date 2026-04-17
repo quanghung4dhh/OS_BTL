@@ -2,9 +2,9 @@ ENTRY(Reset_Handler)
 
 MEMORY
 {
-  /* Giả lập STM32 với 64KB Flash và 20KB RAM */
+  /* Giả lập STM32 với 256KB Flash và 64KB RAM */
   FLASH (rx)      : ORIGIN = 0x00000000, LENGTH = 256K
-  RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 20K
+  RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 64K
 }
 
 _estack = ORIGIN(RAM) + LENGTH(RAM);
