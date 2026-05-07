@@ -38,7 +38,7 @@ void SysTick_Init(uint32_t ticks) {
     SYSTICK_VAL  = 0;           /* Xóa bộ đếm hiện tại về 0 */
     
     /* Bật SysTick: Bit 0 (Enable), Bit 1 (Tạo ngắt), Bit 2 (Dùng Clock CPU) */
-    SYSTICK_CTRL = (1 << 0) | (1 << 1) | (1 << 2); 
+    // SYSTICK_CTRL = (1 << 0) | (1 << 1) | (1 << 2); 
     //Bật công tắc cho thanh ghi điều khiển
     // 1 << 0 : Bật nguồn cho Systick
     // 1 << 1 : Tạo ngắt khi đếm đến 0
