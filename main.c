@@ -154,7 +154,7 @@ void SysTick_Init(uint32_t ticks) {
 
 /* --- 4. HÀM PHỤC VỤ NGẮT (INTERRUPT HANDLER) --- */
 /* Cứ mỗi khi SysTick đếm về 0, CPU sẽ VỨT BỎ MỌI VIỆC ĐANG LÀM để nhảy thẳng vào đây */
-volatile uint32_t system_ticks = 0;
+// volatile uint32_t system_ticks = 0;
 
 // void SysTick_Handler(void) {
 //   system_ticks++; /* Tăng biến đếm tổng của OS */
@@ -175,9 +175,22 @@ int main(void) {
   print_uart("   HELLO OS WORLD! BOOTING SUCCESS!   \n");
   print_uart("Kernel is running...\n");
 
+  // 1. Tạo 2 Task và cấp phát Stack
+  Task_Init(0, Task0_Run, task0_stack, STACK_SIZE);
+  Task_Init(1, Task1_Run, task1_stack, STACK_SIZE);
+  print_uart("Scheduler: Tasks Initialized.\n");
+
+  // 2. Gán PSP = 0 để PendSV biết đây là lần chuyển ngữ cảnh đầu tiên
+  __asm volatile("MSR PSP, %0" : : "r"(0));
+
   volatile int os_tick = 0;
-  SysTick_Init(12000);  // CPU ảo của QEMU chạy ở tần số 12MHz, 12000 tương ứng đúng với 1ms
-  print_uart("Tick started! CPU entering Idle Mode...\n\n");
+
+  // 3. Khởi tạo SysTick timer (Giả sử clock CPU QEMU ~ 12MHz, 1 triệu ~ 80ms)
+  SysTick_Init(12000000);  // CPU ảo của QEMU chạy ở tần số 12MHz, 12000 tương ứng đúng với 1ms
+
+  // 4. Chủ động gọi PendSV lần đầu tiên để nạp Task 0 lên chạy
+  ICSR |= (1 << 28);
+  // print_uart("Tick started! CPU entering Idle Mode...\n\n");
 
   while (1) {
     os_tick++;
