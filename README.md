@@ -21,3 +21,7 @@ git clone https://github.com/quanghung4dhh/OS_BTL.git
 cd OS_BTL
 make run
 ```
+# Tasks done:
+1. Boot OS
+2. Systick
+3. Scheduling and Context switch with 2 dummy tasks task0 and task1
