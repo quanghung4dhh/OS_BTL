@@ -132,7 +132,7 @@ void Task0_Run(void) {
 
 void Task1_Run(void) {
   while (1) {
-    print_uart("    Task 1 is running...\n");
+    print_uart("\tTask 1 is running...\n");
     for (volatile int i = 0; i < 500000; i++);  // Vòng lặp delay tạo hiệu ứng
   }
 }
