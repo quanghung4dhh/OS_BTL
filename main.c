@@ -124,16 +124,22 @@ __attribute__((naked)) void PendSV_Handler(void) {
 /* 5. CÁC TIẾN TRÌNH APP (USER TASKS)                                */
 /* ================================================================= */
 void Task0_Run(void) {
+  int count0 = 0; // Biến đếm của riêng Task 0
   while (1) {
-    print_uart("Task 0 is running...\n");
+    print_uart("Task 0 is running...");
+    print_int(count0++); // In ra con số thực tế
+    print_uart("\n");
     for (volatile int i = 0; i < 500000; i++);  // Vòng lặp delay tạo hiệu ứng
   }
 }
 
 void Task1_Run(void) {
+  int count1 = 0; // Biến đếm của riêng Task 0
   while (1) {
-    print_uart("\tTask 1 is running...\n");
-    for (volatile int i = 0; i < 500000; i++);  // Vòng lặp delay tạo hiệu ứng
+    print_uart("\tTask 1 is running...");
+    print_int(count1++); // In ra con số thực tế
+    print_uart("\n");
+    for (volatile int i = 0; i < 5000000; i++);  // Vòng lặp delay tạo hiệu ứng
   }
 }
 
@@ -186,7 +192,7 @@ int main(void) {
   volatile int os_tick = 0;
 
   // 3. Khởi tạo SysTick timer (Giả sử clock CPU QEMU ~ 12MHz, 1 triệu ~ 80ms)
-  SysTick_Init(12000000);  // CPU ảo của QEMU chạy ở tần số 12MHz, 12000 tương ứng đúng với 1ms
+  SysTick_Init(1000000);  // CPU ảo của QEMU chạy ở tần số 12MHz, 12000 tương ứng đúng với 1ms
 
   // 4. Chủ động gọi PendSV lần đầu tiên để nạp Task 0 lên chạy
   ICSR |= (1 << 28);
