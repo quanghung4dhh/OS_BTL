@@ -90,6 +90,7 @@ void delay_ticks(uint32_t ticks) {
   uint32_t start = system_ticks;
   while ((system_ticks - start) < ticks) {
     // Không làm gì — chờ OS tick trôi qua
+    __asm volatile("WFI");  // CPU ngủ, chờ ngắt SysTick đánh thức
     // CPU vẫn chạy bình thường, SysTick vẫn ngắt được
   }
 }
@@ -109,8 +110,8 @@ __attribute__((naked)) void PendSV_Handler(void) {
       "LDR R1, =current_task \n\t"
       "LDR R2, [R1] \n\t"  // R2 = ID của Task đang chạy
       "LDR R3, =tasks \n\t"
-      "LSL R4, R2, #2 \n\t"    // Dịch bit (x4) vì kích thước con trỏ là 4 byte
-      "STR R0, [R3, R4] \n\t"  // Cất SP mới vào tasks[current_task].sp
+      "LSL R5, R2, #2 \n\t"    // Dịch bit (x4) vì kích thước con trỏ là 4 byte
+      "STR R0, [R3, R5] \n\t"  // Cất SP mới vào tasks[current_task].sp
 
       /* NẠP NGỮ CẢNH TASK MỚI */
       "restore_context: \n\t"
