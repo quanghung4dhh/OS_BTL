@@ -6,6 +6,7 @@ volatile uint32_t* const UART0_DR = (uint32_t*)0x4000C000;
 #define SYSTICK_LOAD (*((volatile uint32_t*)0xE000E014)) /* Giá trị nạp lại */  // Thanh ghi chứa con số bắt đầu, sẽ đếm lùi
 #define SYSTICK_VAL (*((volatile uint32_t*)0xE000E018)) /* Giá trị hiện tại */  // Thanh ghi hiển thị giá trị đếm hiện tại
 #define ICSR (*((volatile uint32_t*)0xE000ED04))                                // Thanh ghi để kích hoạt PendSV
+volatile uint32_t system_ticks = 0;                                             // Biến đếm tổng global để đồng bộ
 
 /* Hàm in một chuỗi ký tự ra cổng UART */
 void print_uart(const char* str) {
@@ -79,8 +80,18 @@ void SysTick_Handler(void) {
   // Thuật toán Round-Robin: Luân phiên 0 -> 1 -> 0 -> 1...
   next_task = (current_task + 1) % 2;
 
+  system_ticks++;  // Tăng biến đếm của hệ thống
   // Ghi vào bit 28 của thanh ghi ICSR để kích hoạt ngắt PendSV
   ICSR |= (1 << 28);
+}
+
+// Hàm delay dùng chung trong hệ thống
+void delay_ticks(uint32_t ticks) {
+  uint32_t start = system_ticks;
+  while ((system_ticks - start) < ticks) {
+    // Không làm gì — chờ OS tick trôi qua
+    // CPU vẫn chạy bình thường, SysTick vẫn ngắt được
+  }
 }
 
 /* ================================================================= */
@@ -124,22 +135,22 @@ __attribute__((naked)) void PendSV_Handler(void) {
 /* 5. CÁC TIẾN TRÌNH APP (USER TASKS)                                */
 /* ================================================================= */
 void Task0_Run(void) {
-  int count0 = 0; // Biến đếm của riêng Task 0
+  int count0 = 0;  // Biến đếm của riêng Task 0
   while (1) {
     print_uart("Task 0 is running...");
-    print_int(count0++); // In ra con số thực tế
+    print_int(count0++);  // In ra con số thực tế
     print_uart("\n");
-    for (volatile int i = 0; i < 500000; i++);  // Vòng lặp delay tạo hiệu ứng
+    delay_ticks(10);  // delay tạo hiệu ứng
   }
 }
 
 void Task1_Run(void) {
-  int count1 = 0; // Biến đếm của riêng Task 0
+  int count1 = 0;  // Biến đếm của riêng Task 0
   while (1) {
     print_uart("\tTask 1 is running...");
-    print_int(count1++); // In ra con số thực tế
+    print_int(count1++);  // In ra con số thực tế
     print_uart("\n");
-    for (volatile int i = 0; i < 500000; i++);  // Vòng lặp delay tạo hiệu ứng
+    delay_ticks(10);  // delay tạo hiệu ứng
   }
 }
 
@@ -191,7 +202,7 @@ int main(void) {
 
   volatile int os_tick = 0;
 
-  // 3. Khởi tạo SysTick timer (Giả sử clock CPU QEMU ~ 12MHz, 1 triệu ~ 80ms)
+  // 3. Khởi tạo SysTick timer
   SysTick_Init(12000 * 50);  // CPU ảo của QEMU chạy ở tần số 12MHz, 12000 tương ứng đúng với 1ms
 
   // 4. Chủ động gọi PendSV lần đầu tiên để nạp Task 0 lên chạy
