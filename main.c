@@ -44,7 +44,7 @@ typedef struct {
   uint32_t* sp;
 } TCB_t;
 
-TCB_t tasks[1];
+TCB_t tasks[2];
 volatile int current_task = 0;
 volatile int next_task = 0;
 /* ================================================================= */
@@ -156,19 +156,19 @@ void SysTick_Init(uint32_t ticks) {
 /* Cứ mỗi khi SysTick đếm về 0, CPU sẽ VỨT BỎ MỌI VIỆC ĐANG LÀM để nhảy thẳng vào đây */
 volatile uint32_t system_ticks = 0;
 
-void SysTick_Handler(void) {
-  system_ticks++; /* Tăng biến đếm tổng của OS */
+// void SysTick_Handler(void) {
+//   system_ticks++; /* Tăng biến đếm tổng của OS */
 
-  /* Cứ mỗi 1000 lần ngắt (1 giây), in ra màn hình số giây đã trôi qua */
-  if (system_ticks % 1000 == 0) {
-    print_uart("Tick: ");
-    print_int(system_ticks / 1000);
-    print_uart(" seconds passed \n");
-    if (system_ticks % 10000 == 0) {
-      print_uart("Horray!!! \n");
-    }
-  }
-}
+//   /* Cứ mỗi 1000 lần ngắt (1 giây), in ra màn hình số giây đã trôi qua */
+//   if (system_ticks % 1000 == 0) {
+//     print_uart("Tick: ");
+//     print_int(system_ticks / 1000);
+//     print_uart(" seconds passed \n");
+//     if (system_ticks % 10000 == 0) {
+//       print_uart("Horray!!! \n");
+//     }
+//   }
+// }
 
 int main(void) {
   /* Cất tiếng khóc chào đời! */
