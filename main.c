@@ -139,7 +139,7 @@ void Task1_Run(void) {
     print_uart("\tTask 1 is running...");
     print_int(count1++); // In ra con số thực tế
     print_uart("\n");
-    for (volatile int i = 0; i < 5000000; i++);  // Vòng lặp delay tạo hiệu ứng
+    for (volatile int i = 0; i < 500000; i++);  // Vòng lặp delay tạo hiệu ứng
   }
 }
 
@@ -192,7 +192,7 @@ int main(void) {
   volatile int os_tick = 0;
 
   // 3. Khởi tạo SysTick timer (Giả sử clock CPU QEMU ~ 12MHz, 1 triệu ~ 80ms)
-  SysTick_Init(1000000);  // CPU ảo của QEMU chạy ở tần số 12MHz, 12000 tương ứng đúng với 1ms
+  SysTick_Init(12000 * 50);  // CPU ảo của QEMU chạy ở tần số 12MHz, 12000 tương ứng đúng với 1ms
 
   // 4. Chủ động gọi PendSV lần đầu tiên để nạp Task 0 lên chạy
   ICSR |= (1 << 28);
