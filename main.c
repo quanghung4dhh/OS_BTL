@@ -102,22 +102,25 @@ void Mutex_Init(Mutex_t* m) {
 }
 
 void Mutex_Acquire(Mutex_t* m) {
-  __asm volatile("cpsid i");  // Vô hiệu hóa ngắt (Lệnh phần cứng Cortex-M3) [2, 3]
+  while (1) {
+    __asm volatile("cpsid i");  // Vô hiệu hóa ngắt (Lệnh phần cứng Cortex-M3) [2, 3]
 
-  if (m->lock_flag == 0) {
-    m->lock_flag = 1;  // Khóa cửa
-    m->owner_id = current_task;
-  } else {
-    // Cửa đã khóa -> Tự phong ấn chính mình
-    tasks[current_task].state = TASK_BLOCKED;
-    m->wait_task_id = current_task;  // Đăng ký tên vào danh sách chờ
+    if (m->lock_flag == 0) {
+      m->lock_flag = 1;  // Khóa cửa
+      m->owner_id = current_task;
+      __asm volatile("cpsie i");  // BẬT LẠI NGẮT CHO HỆ THỐNG
+      return;                     // THOÁT HÀM ĐỂ TASK CHẠY TIẾP
+    } else {
+      // Cửa đã khóa -> Tự phong ấn chính mình
+      tasks[current_task].state = TASK_BLOCKED;
+      m->wait_task_id = current_task;  // Đăng ký tên vào danh sách chờ
 
-    // Cưỡng ép nhường CPU cho Task kia
-    next_task = (current_task + 1) % 2;
-    ICSR |= (1 << 28);  // Gọi PendSV để Context Switch lập tức
+      // Cưỡng ép nhường CPU cho Task kia
+      next_task = (current_task + 1) % 2;
+      ICSR |= (1 << 28);          // Gọi PendSV để Context Switch lập tức
+      __asm volatile("cpsie i");  // Bật lại ngắt [2, 3]
+    }
   }
-
-  __asm volatile("cpsie i");  // Bật lại ngắt [2, 3]
 }
 
 void Mutex_Release(Mutex_t* m) {
@@ -137,6 +140,7 @@ void Mutex_Release(Mutex_t* m) {
 
 // Bộ lập lịch
 void SysTick_Handler(void) {
+  system_ticks++;
   int temp_next = (current_task + 1) % 2;
 
   // Chỉ chuyển ngữ cảnh nếu Task tiếp theo đang THỨC (READY)
@@ -172,7 +176,7 @@ __attribute__((naked)) void PendSV_Handler(void) {
       "LDR R1, =current_task \n\t"
       "LDR R2, [R1] \n\t"  // R2 = ID của Task đang chạy
       "LDR R3, =tasks \n\t"
-      "LSL R5, R2, #2 \n\t"    // Dịch bit (x4) vì kích thước con trỏ là 4 byte
+      "LSL R5, R2, #3  \n\t"   // Dịch bit (x4) vì kích thước con trỏ là 8 byte
       "STR R0, [R3, R5] \n\t"  // Cất SP mới vào tasks[current_task].sp
 
       /* NẠP NGỮ CẢNH TASK MỚI */
@@ -183,7 +187,7 @@ __attribute__((naked)) void PendSV_Handler(void) {
       "STR R2, [R5] \n\t"  // Cập nhật current_task = next_task
 
       "LDR R3, =tasks \n\t"
-      "LSL R4, R2, #2 \n\t"    // Dịch bit (x4)
+      "LSL R4, R2, #3 \n\t"    // Dịch bit (x8 )
       "LDR R0, [R3, R4] \n\t"  // R0 = tasks[next_task].sp (Đọc SP của Task mới)
 
       "LDMIA R0!, {R4-R11} \n\t"  // Lấy R4-R11 từ Stack của Task mới ra CPU
