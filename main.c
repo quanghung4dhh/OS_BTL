@@ -40,14 +40,30 @@ void print_int(uint32_t num) {
 uint32_t task0_stack[STACK_SIZE];
 uint32_t task1_stack[STACK_SIZE];
 
+// Định nghĩa trạng thái của Task
+typedef enum {
+  TASK_READY = 0,
+  TASK_BLOCKED
+} TaskState_t;
+
 // TCB_t lưu trữ Con trỏ ngăn xếp (SP) của mỗi Task
 typedef struct {
   uint32_t* sp;
+  TaskState_t state;
 } TCB_t;
+
+// Định nghĩa cấu trúc Mutex (Theo nguyên lý Hệ điều hành)
+typedef struct {
+  int lock_flag;     // 0: Mở (Available), 1: Khóa (Unavailable)
+  int owner_id;      // ID của tiến trình đang giữ khóa
+  int wait_task_id;  // ID của tiến trình đang bị chặn chờ khóa (-1 nếu trống)
+} Mutex_t;
 
 TCB_t tasks[2];
 volatile int current_task = 0;
 volatile int next_task = 0;
+
+Mutex_t uart_mutex;  // Khai báo một ổ khóa toàn cục cho ngoại vi UART
 /* ================================================================= */
 /* 2. KHỞI TẠO STACK GIẢ (DUMMY STACK FRAME) CHO TASK MỚI            */
 /* ================================================================= */
@@ -70,19 +86,65 @@ void Task_Init(int task_id, void (*task_func)(void), uint32_t* stack, uint32_t s
     *(--sp) = 0;
   }
 
-  tasks[task_id].sp = sp;  // Lưu lại đỉnh Stack vào TCB
+  tasks[task_id].sp = sp;             // Lưu lại đỉnh Stack vào TCB
+  tasks[task_id].state = TASK_READY;  // Thêm dòng này: Khởi tạo Task luôn
 }
 
 /* ================================================================= */
 /* 3. BỘ LẬP LỊCH THỜI GIAN THỰC (ROUND-ROBIN SCHEDULER)             */
 /* ================================================================= */
-void SysTick_Handler(void) {
-  // Thuật toán Round-Robin: Luân phiên 0 -> 1 -> 0 -> 1...
-  next_task = (current_task + 1) % 2;
 
-  system_ticks++;  // Tăng biến đếm của hệ thống
-  // Ghi vào bit 28 của thanh ghi ICSR để kích hoạt ngắt PendSV
-  ICSR |= (1 << 28);
+// --- KHỐI CODE MUTEX ---
+void Mutex_Init(Mutex_t* m) {
+  m->lock_flag = 0;
+  m->owner_id = -1;
+  m->wait_task_id = -1;
+}
+
+void Mutex_Acquire(Mutex_t* m) {
+  __asm volatile("cpsid i");  // Vô hiệu hóa ngắt (Lệnh phần cứng Cortex-M3) [2, 3]
+
+  if (m->lock_flag == 0) {
+    m->lock_flag = 1;  // Khóa cửa
+    m->owner_id = current_task;
+  } else {
+    // Cửa đã khóa -> Tự phong ấn chính mình
+    tasks[current_task].state = TASK_BLOCKED;
+    m->wait_task_id = current_task;  // Đăng ký tên vào danh sách chờ
+
+    // Cưỡng ép nhường CPU cho Task kia
+    next_task = (current_task + 1) % 2;
+    ICSR |= (1 << 28);  // Gọi PendSV để Context Switch lập tức
+  }
+
+  __asm volatile("cpsie i");  // Bật lại ngắt [2, 3]
+}
+
+void Mutex_Release(Mutex_t* m) {
+  __asm volatile("cpsid i");  // Vô hiệu hóa ngắt
+
+  m->lock_flag = 0;  // Mở khóa
+  m->owner_id = -1;
+
+  // Nếu có Task đang đứng chờ ngoài cửa, đánh thức nó dậy [4]
+  if (m->wait_task_id != -1) {
+    tasks[m->wait_task_id].state = TASK_READY;
+    m->wait_task_id = -1;  // Xóa danh sách chờ
+  }
+
+  __asm volatile("cpsie i");  // Bật lại ngắt
+}
+
+// Bộ lập lịch
+void SysTick_Handler(void) {
+  int temp_next = (current_task + 1) % 2;
+
+  // Chỉ chuyển ngữ cảnh nếu Task tiếp theo đang THỨC (READY)
+  if (tasks[temp_next].state == TASK_READY) {
+    next_task = temp_next;
+    ICSR |= (1 << 28);
+  }
+  // Nếu Task kia đang BLOCKED, Bộ lập lịch im lặng cho Task hiện tại chạy tiếp
 }
 
 // Hàm delay dùng chung trong hệ thống
@@ -138,9 +200,12 @@ __attribute__((naked)) void PendSV_Handler(void) {
 void Task0_Run(void) {
   int count0 = 0;  // Biến đếm của riêng Task 0
   while (1) {
+    Mutex_Acquire(&uart_mutex);  // XIN KHÓA TRƯỚC KHI IN
     print_uart("Task 0 is running...");
-    print_int(count0++);  // In ra con số thực tế
+    print_int(count0++);
     print_uart("\n");
+    Mutex_Release(&uart_mutex);  // IN XONG PHẢI TRẢ KHÓA
+
     delay_ticks(10);  // delay tạo hiệu ứng
   }
 }
@@ -148,10 +213,12 @@ void Task0_Run(void) {
 void Task1_Run(void) {
   int count1 = 0;  // Biến đếm của riêng Task 0
   while (1) {
+    Mutex_Acquire(&uart_mutex);  // XIN KHÓA TRƯỚC KHI IN
     print_uart("\tTask 1 is running...");
-    print_int(count1++);  // In ra con số thực tế
+    print_int(count1++);
     print_uart("\n");
-    delay_ticks(10);  // delay tạo hiệu ứng
+    Mutex_Release(&uart_mutex);  // IN XONG PHẢI TRẢ KHÓA
+    delay_ticks(10);             // delay tạo hiệu ứng
   }
 }
 
@@ -170,29 +237,13 @@ void SysTick_Init(uint32_t ticks) {
   SYSTICK_CTRL = 0x07;
 }
 
-/* --- 4. HÀM PHỤC VỤ NGẮT (INTERRUPT HANDLER) --- */
-/* Cứ mỗi khi SysTick đếm về 0, CPU sẽ VỨT BỎ MỌI VIỆC ĐANG LÀM để nhảy thẳng vào đây */
-// volatile uint32_t system_ticks = 0;
-
-// void SysTick_Handler(void) {
-//   system_ticks++; /* Tăng biến đếm tổng của OS */
-
-//   /* Cứ mỗi 1000 lần ngắt (1 giây), in ra màn hình số giây đã trôi qua */
-//   if (system_ticks % 1000 == 0) {
-//     print_uart("Tick: ");
-//     print_int(system_ticks / 1000);
-//     print_uart(" seconds passed \n");
-//     if (system_ticks % 10000 == 0) {
-//       print_uart("Horray!!! \n");
-//     }
-//   }
-// }
-
 int main(void) {
   /* Cất tiếng khóc chào đời! */
   print_uart("   HELLO OS WORLD! BOOTING SUCCESS!   \n");
   print_uart("Kernel is running...\n");
 
+  // Khởi tạo Mutex:
+  Mutex_Init(&uart_mutex);
   // 1. Tạo 2 Task và cấp phát Stack
   Task_Init(0, Task0_Run, task0_stack, STACK_SIZE);
   Task_Init(1, Task1_Run, task1_stack, STACK_SIZE);
