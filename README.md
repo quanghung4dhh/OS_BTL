@@ -5,11 +5,11 @@
 4. QEMU
 
 # Setup:
-## Install Ubuntu WSL
+## Install Ubuntu WSL (If you are using Windows)
 ```bash
 wsl --install -d Ubuntu
 ```
-## Then restart your computer
+### Then restart your computer
 ## Install other requirements (With Ubuntu terminal):
 ```bash
 sudo apt update
