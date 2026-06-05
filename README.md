@@ -25,3 +25,4 @@ make run
 1. Boot OS
 2. Systick
 3. Scheduling and Context switch with 2 dummy tasks task0 and task1
+4. Mutex Lock
